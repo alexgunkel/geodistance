@@ -4,11 +4,14 @@
 #include <string>
 #include <cmath>
 #include <chrono>
+#include <stdexcept>
 
 namespace ag {
 using namespace std;
 
 enum coordinate_type { LATITUDE, LONGITUDE };
+const double LATITUDE_MAX {90.};
+const double LONGITUDE_MAX {180.};
 
 template<typename T>
 inline constexpr T deg2rad(const T deg)
@@ -23,7 +26,12 @@ class Coordinate {
 public:
     T value;
     coordinate_type type {C};
-    constexpr Coordinate(T value): value{value} {}
+    constexpr Coordinate(T value) throw (logic_error): value{value} {
+    auto maximum = C == LATITUDE ? LATITUDE_MAX : LONGITUDE_MAX;
+        if (abs(value) > maximum) {
+            throw logic_error("invalid value: " + to_string(value));
+        }
+    }
     constexpr T radians() const noexcept { return deg2rad(value); };
     operator T() const noexcept { return value; }
 };
@@ -67,9 +75,9 @@ constexpr distance_t distance(GeoPoint<T> a, GeoPoint<T> b) noexcept
 
 int main()
 {
-    for (int i = 0; i < 90; i++) {
+    for (int i = 0; i < 91; i++) {
         ag::GeoPoint<double> test {0, 0};
-        ag::GeoPoint<double> testB {i, i};
+        ag::GeoPoint<double> testB {-i, 2*i};
 
         std::cout << test << " to " << testB << ": " << (ag::distance(testB, test)/1000) << std::endl;
     }
