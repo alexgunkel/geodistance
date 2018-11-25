@@ -22,14 +22,22 @@ inline constexpr T rad2deg(const T rad)
 { return rad * (180 / M_PI); }
 
 template<class T, coordinate_type C>
+class Coordinate;
+
+template<class T, coordinate_type C>
+ostream& operator<< (ostream& out, Coordinate<T, C> c);
+
+template<class T, coordinate_type C>
 class Coordinate {
-public:
+friend ostream& operator<< <T, C> (ostream& out, Coordinate c);
+private:
     T value;
+public:
     coordinate_type type {C};
     constexpr Coordinate(T value) throw (logic_error): value{value} {
     auto maximum = C == LATITUDE ? LATITUDE_MAX : LONGITUDE_MAX;
         if (abs(value) > maximum) {
-            throw logic_error("invalid value: " + to_string(value));
+            throw domain_error("invalid value for type " + to_string(C) + ": " + to_string(value));
         }
     }
     constexpr T radians() const noexcept { return deg2rad(value); };
@@ -42,10 +50,24 @@ struct GeoPoint {
     Coordinate<T, LONGITUDE> lng;
 };
 
+template<typename T, coordinate_type C>
+ostream& operator<< (ostream& out, Coordinate<T, C> c)
+{
+    out << c.value << "°";
+
+    return out;
+}
+
 template<typename T>
 ostream& operator<< (ostream& o, GeoPoint<T>& p)
 {
+    auto pr = o.precision();
+    o.precision(9);
+    auto flags = o.flags();
+    o.setf(ios::fixed, ios::floatfield);
     o << "(" << p.lat << ", " << p.lng << ")";
+    o.precision(pr);
+    o.flags(flags);
 
     return o;
 }
@@ -55,12 +77,12 @@ constexpr double factor()
     return 60 * 1.1515 * 1609.344;
 }
 
-typedef int distance_t;
+typedef double distance_t;
 
 template<typename T>
 constexpr distance_t distance(GeoPoint<T> a, GeoPoint<T> b) noexcept
 {
-    return int(rad2deg(
+    return double(rad2deg(
         acos(
             sin(a.lat.radians())
               * sin(b.lat.radians())
@@ -75,12 +97,12 @@ constexpr distance_t distance(GeoPoint<T> a, GeoPoint<T> b) noexcept
 
 int main()
 {
-    for (int i = 0; i < 91; i++) {
-        ag::GeoPoint<double> test {0, 0};
-        ag::GeoPoint<double> testB {-i, 2*i};
+    ag::GeoPoint<double> test {0.123456789, 0.987654321};
+    ag::GeoPoint<double> testB {9.87654321, 1.23456789};
 
-        std::cout << test << " to " << testB << ": " << (ag::distance(testB, test)/1000) << std::endl;
-    }
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(3);
+    std::cout << test << " to " << testB << ": " << (ag::distance(testB, test)/1000) << std::endl;
 
     return 0;
 }
